@@ -1,4 +1,4 @@
-from graph1 import evaluate_state
+from try_pyboolnet import evaluate_state
 import networkx as nx
 class Agent:
     def __init__(self, agent_id, graph, position="V1" ):
