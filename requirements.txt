@@ -1,0 +1,5 @@
+git+https://github.com/hklarner/pyboolnet#egg=pyboolnet
+networkx
+matplotlib
+pandas
+torch
