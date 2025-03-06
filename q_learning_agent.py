@@ -1,5 +1,5 @@
 import numpy as np
-from boolean_network import primes, edge_functions, target_values, evaluate_state
+from boolean_network import primes, edge_functions, target_values, nodes, evaluate_state, find_initial_conditions
 
 
 class QLearningAgent:
@@ -87,14 +87,15 @@ class QLearningAgent:
         state_key = self.get_state_key(state)
         next_state_key = self.get_state_key(next_state)
 
-        # Get the current Q-value
+        # Get the current Q-value - Q(s,a):
         current_q = self.q_table.get((state_key, action), 0)
 
-        # Get the maximum Q-value for the next state
+        # Get the maximum Q-value for the next state- max_a Q(s',a):
         possible_actions = self.get_possible_actions(next_state)
         max_next_q = max([self.q_table.get((next_state_key, a), 0) for a in possible_actions])
 
         # Update the Q-value using the Q-learning formula
+        # new Q(s,a) <- Q(s,a) + alpha [R + gamma * max_a Q(s',a)-Q(s,a)]
         new_q = current_q + self.alpha * (reward + self.gamma * max_next_q - current_q)
         self.q_table[(state_key, action)] = new_q
 
@@ -153,16 +154,3 @@ class QLearningAgent:
             if state_key not in policy or q_value > self.q_table.get((state_key, policy[state_key]), 0):
                 policy[state_key] = action
         return policy
-
-
-# Main script to train the agent and extract the optimal policy
-if __name__ == "__main__":
-    # Create the Q-learning agent
-    agent = QLearningAgent(primes, edge_functions, target_values)
-
-    # Train the agent
-    agent.train(episodes=1000)
-
-    # Get the optimal policy
-    optimal_policy = agent.get_optimal_policy()
-    print("Optimal Policy:", optimal_policy)
