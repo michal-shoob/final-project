@@ -1,5 +1,8 @@
 git+https://github.com/hklarner/pyboolnet#egg=pyboolnet
-networkx
-matplotlib
-pandas
+networkx~=3.4.2
+matplotlib~=3.10.1
+pandas~=2.2.3
 torch
+
+numpy~=2.2.3
+pillow~=11.1.0
