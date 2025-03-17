@@ -40,19 +40,19 @@ def main():
     agent = Agent(agent_id=1, graph=graph, position="V1")
 
     # Simulate the network for a few steps
-    num_steps = 10
-    for step in range(num_steps):
-        print(f"\nStep {step + 1}:")
-        print("Current node states:", nx.get_node_attributes(graph, "state"))
-
-        # Compute the next state of the graph
-        graph = next_graph_state(graph, primes, edge_functions)
-
-    print("\nFinal node states:", nx.get_node_attributes(graph, "state"))
+    # num_steps = 10
+    # for step in range(num_steps):
+    #     print(f"\nStep {step + 1}:")
+    #     print("Current node states:", nx.get_node_attributes(graph, "state"))
+    #
+    #     # Compute the next state of the graph
+    #     graph = next_graph_state(graph, primes, edge_functions)
+    #
+    # print("\nFinal node states:", nx.get_node_attributes(graph, "state"))
 
     # Create and train the Q-learning agent
     q_agent = QLearningAgent(primes, edge_functions, target_values)
-    # q_agent.train(episodes=1000)
+    q_agent.train(episodes=1000)
 
     # Find initial conditions using the trained Q-learning agent
     valid_initial_conditions = find_initial_conditions(primes, target_values, nodes, edge_functions, max_iterations=100,

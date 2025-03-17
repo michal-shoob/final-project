@@ -23,6 +23,15 @@ class QLearningAgent:
 
         # Initialize Q-table as a dictionary
         self.q_table = {}  # Key: (state, action), Value: Q-value
+        # Initialize Q-values for all states. Each state has two possible actions (0 or 1).
+        for k, v in init_values.items():
+            # if p already assigns a value, keep it (1 for this value, and 0 for the other)
+            if v is not None:
+                self.q_table[(k, 0)] = 1 if v == 0 else 0
+                self.q_table[(k, 1)] = 1 if v == 1 else 0
+            else:
+                self.q_table[(k, 0)] = 0.5
+                self.q_table[(k, 1)] = 0.5
 
     def get_state_key(self, state):
         """
@@ -109,10 +118,10 @@ class QLearningAgent:
             state = self.get_initial_state()  # Get the initial state of the network
             done = False
 
-            while not done:
-                # Choose an action
-                action = self.choose_action(state)
+            # Choose an action
+            action = self.choose_action(state)
 
+            while not done:
                 # Take the action and observe the next state and reward
                 next_state = evaluate_state(state, self.primes, self.edge_functions)
                 reward = self.get_reward(state, action, next_state)
