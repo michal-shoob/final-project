@@ -2,6 +2,7 @@ import networkx as nx
 from boolean_network import evaluate_state
 
 
+
 class Agent:
     def __init__(self, agent_id, graph, position="V1"):
         """

@@ -4,7 +4,7 @@ from itertools import product
 
 # Define the network in BNET format
 bnet = """
-v1,    v1
+v1,    1
 v2,    v2
 v3,    v1 | v4
 v4,    v6 & v2
@@ -18,6 +18,17 @@ primes = file_exchange.bnet2primes(bnet)
 
 # List of nodes
 nodes = list(primes.keys())
+
+initial_values = {
+    "v1": None,
+    "v2": 1,
+    "v3": 1,
+    "v4": None,
+    "v5": 1,
+    "v6": 1,
+    "v7": None
+
+}
 
 # Define target values
 target_values = {
@@ -47,9 +58,9 @@ edge_functions = {
 
 
 def evaluate_state(state, primes, edge_functions):
-    """
-    Evaluates the next state of the network according to the primes and edge functions.
-    """
+
+    #Evaluates the next state of the network according to the primes and edge functions.
+    
     new_state = state.copy()
 
     # Evaluate primes (node functions)
@@ -58,7 +69,7 @@ def evaluate_state(state, primes, edge_functions):
         if isinstance(func, str):  # if the function is a string
             try:
                 # Do not replace AND and OR for node functions, as they are used for boolean logic
-                new_state[node] = eval(func, {}, state)
+                new_state[node] = eval(func, {},new_state)
                 print(f"Node {node}: {func} => {new_state[node]}")
             except Exception as e:
                 print(f"Warning: Error evaluating function for node {node}. Error: {e}")
@@ -77,7 +88,7 @@ def evaluate_state(state, primes, edge_functions):
         if start_node in state:
             try:
                 # Keep the AND and OR as they are (no need to replace)
-                new_state[end_node] = eval(edge_func, {}, state)
+                new_state[end_node] = eval(edge_func, {}, new_state)
                 print(f"Edge ({start_node} -> {end_node}): {edge_func} => {new_state[end_node]}")
             except Exception as e:
                 print(f"Warning: Error evaluating edge function for edge ({start_node}, {end_node}). Error: {e}")
@@ -89,68 +100,85 @@ def evaluate_state(state, primes, edge_functions):
 from itertools import product
 
 
-def find_initial_conditions(primes, target_values, nodes, edge_functions, max_iterations=100, agent=None):
+from itertools import product
+
+
+def find_initial_conditions(primes, target_values, nodes, edge_functions, initial_state, max_iterations=100, agent=None):
     """
-    Find initial conditions that lead the network to the target values after a number of updates.
+    Find ONLY the initial conditions (including assignments for the None nodes)
+    that lead the network to the target values after updates.
 
     :param primes: A dictionary of node functions (primes).
     :param target_values: A dictionary of target values for each node.
     :param nodes: A list of nodes in the network.
     :param edge_functions: A dictionary of edge functions.
+    :param initial_state: A dictionary with initial values for each node (None => to be randomized).
     :param max_iterations: The maximum number of iterations to simulate (default: 100).
     :param agent: An optional Q-learning agent to guide the search (default: None).
-    :return: A list of valid initial conditions.
+    :return: A list of dictionaries, each containing:
+        {
+          "initial_condition": dict,        # The assignment (including your fixed values + bits for None)
+          "final_state": dict,             # The final stable state after updates
+          "intermediate_states": list[dict] # The states after each iteration until stabilization
+        }
     """
-    possible_conditions = list(product([0, 1], repeat=len(nodes)))
-    valid_initial_conditions = []
-    visited_states = set()  # Track visited states to avoid redundant evaluations
 
-    for initial_conditions in possible_conditions:
-        initial_state = dict(zip(nodes, initial_conditions))
-        initial_state_key = tuple(initial_state.items())
-        # Skip if this initial state has already been visited
-        if initial_state_key in visited_states:
+    # Nodes with a value of None – we will generate all combinations for these nodes
+    none_nodes = [node for node in nodes if initial_state.get(node) is None]
+
+    # All possible combinations of 0/1 for the nodes that are None
+    possible_conditions = list(product([0, 1], repeat=len(none_nodes)))
+
+    valid_initial_conditions = []
+    visited_states = set()
+    print("initial_state:", initial_state)
+    print("none_nodes:", none_nodes)
+    print("possible_conditions:", possible_conditions)
+
+    for condition in possible_conditions:
+        # Build a new initial state for the current combination
+        trial_state = initial_state.copy()
+        for idx, node in enumerate(none_nodes):
+            trial_state[node] = condition[idx]
+
+        # Ensure we haven't already visited this state
+        trial_state_key = tuple(sorted(trial_state.items()))
+        if trial_state_key in visited_states:
             continue
-        print(f"\nTesting initial condition: {initial_conditions}")
-        current_state = initial_state.copy()
+        visited_states.add(trial_state_key)
+
+        print(f"\n--- Testing initial condition: {trial_state} ---")
+        current_state = trial_state.copy()
         intermediate_states = []
 
-        # Perform updates to the network until it stabilizes or the max number of iterations is reached
+        # Update the network until it stabilizes or the maximum iterations are reached
         for _ in range(max_iterations):
             if agent:
-                # Use the agent to choose the best action
                 action = agent.choose_action(current_state)
                 next_state = evaluate_state(current_state, primes, edge_functions)
             else:
-                # Perform a brute-force update without the agent
                 next_state = evaluate_state(current_state, primes, edge_functions)
 
-            # Save the new state
             intermediate_states.append(next_state.copy())
 
-            # If the state has stabilized, we break out of the loop
+            # If there is no change between the current state and the next state, the network has stabilized
             if next_state == current_state:
-                print(f"The final state of these initial conditions: {list(current_state.values())}")
+                print(f"--> Stabilized final state: {next_state}")
+                # Remove the last state from the list since it's identical to the previous one
                 intermediate_states.pop()
                 break
 
             current_state = next_state
 
-        # Mark the initial state as visited
-        visited_states.add(initial_state_key)
-
-        # If the final state matches the target values, we store the initial condition
-        if all(current_state[node] == value for node, value in target_values.items()):
+        # Check if the final state matches the target values
+        if all(current_state[node] == val for node, val in target_values.items()):
+            # If yes – add the valid initial condition to the list
             valid_initial_conditions.append({
-                "initial_condition": dict(zip(nodes, initial_conditions)),
-                "final_state": current_state,
+                "initial_condition": trial_state.copy(),
+                "final_state": current_state.copy(),
                 "intermediate_states": intermediate_states
             })
 
     return valid_initial_conditions
-
-
-
-
 
 

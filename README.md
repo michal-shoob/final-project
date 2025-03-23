@@ -23,14 +23,15 @@ To set up the project, follow these steps:
 project_name/
 │
 ├── src/                # Source code
-│   ├── main.py         # Entry point (example)
-│   └── utils/          # Utility functions or modules
+│   ├── main.py         # Entry point (example) - main
+│   └── utils/          # Utility functions or modules - boolean_network, q_learning_agent, agent
 │
 ├── tests/              # Unit and integration tests
 │
 ├── data/               # Datasets or input files (if any)
 │
-├── requirements.txt    # Dependencies
+|--- Screenshots        # Output 1 : network_states, table_visualization
+
 │
 └── README.md           # Project documentation (this file)
 ```

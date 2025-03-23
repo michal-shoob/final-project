@@ -1,6 +1,6 @@
 import numpy as np
 from boolean_network import primes, edge_functions, target_values, nodes, evaluate_state, find_initial_conditions
-
+from boolean_network import initial_values
 
 class QLearningAgent:
     def __init__(self, primes, edge_functions, target_values, alpha=0.1, gamma=0.9, epsilon=0.1):
@@ -23,15 +23,15 @@ class QLearningAgent:
 
         # Initialize Q-table as a dictionary
         self.q_table = {}  # Key: (state, action), Value: Q-value
-        # Initialize Q-values for all states. Each state has two possible actions (0 or 1).
-        for k, v in init_values.items():
+        for k, v in initial_values.items():
             # if p already assigns a value, keep it (1 for this value, and 0 for the other)
             if v is not None:
-                self.q_table[(k, 0)] = 1 if v == 0 else 0
-                self.q_table[(k, 1)] = 1 if v == 1 else 0
+                self.q_table[(k, 0)] = 1 if v == 0 else 0  #If the value is 0, it sets a 100% probability (Q-value = 1) for action 0 and 0% for action 1
+                self.q_table[(k, 1)] = 1 if v == 1 else 0 #If the value is 1, it sets a 100% probability (Q-value = 1) for action 0 and 0% for action 1
             else:
                 self.q_table[(k, 0)] = 0.5
                 self.q_table[(k, 1)] = 0.5
+
 
     def get_state_key(self, state):
         """
