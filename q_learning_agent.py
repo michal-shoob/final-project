@@ -65,7 +65,7 @@ class QLearningAgent:
                 total_q = 0
                 for node, value in action.items():
                     total_q += self.q_table.get((node, value), 0)
-                    action_q_values.append(total_q)
+                action_q_values.append(total_q)
                 # Debugging print for each action's Q-value
                 print(f"Action: {action} -> Q-value: {total_q}")
             # Find all actions with maximum Q-value
@@ -73,7 +73,6 @@ class QLearningAgent:
             # In case of multiple actions with max Q-value, choose randomly among them
             max_actions = [a for a, q in zip(possible_actions, action_q_values) if q == max_q]
             best_actions = np.random.choice(max_actions)
-            print(f"Max Q-value: {max_actions}")  # Debug
             print(f"Best actions: {best_actions}")  # Debug
             return best_actions
 
