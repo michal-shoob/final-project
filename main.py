@@ -52,7 +52,7 @@ def main():
 
     # Create and train the Q-learning agent
     q_agent = QLearningAgent(primes, edge_functions, target_values)
-    #q_agent.train(episodes=1000)
+    q_agent.train(episodes=1000, initial_values= initial_values)
 
     # Find initial conditions using the trained Q-learning agent
     valid_initial_conditions = find_initial_conditions(primes, target_values, nodes, edge_functions,initial_values, max_iterations=100)

@@ -1,6 +1,7 @@
 import numpy as np
 from boolean_network import primes, edge_functions, target_values, nodes, evaluate_state, find_initial_conditions
 from boolean_network import initial_values
+from itertools import product
 
 class QLearningAgent:
     def __init__(self, primes, edge_functions, target_values, alpha=0.1, gamma=0.9, epsilon=0.1):
@@ -66,8 +67,27 @@ class QLearningAgent:
         :param state: The current state of the Boolean network.
         :return: A list of possible actions.
         """
+        # Nodes with a value of None – we will generate all combinations for these nodes
+        none_nodes = [node for node in nodes if initial_values.get(node) is None]
+
+        # All possible combinations of 0/1 for the nodes that are None
+        possible_replace_none = list(product([0, 1], repeat=len(none_nodes)))
+        possible_actions = []
+        visited_states = set()
+        for condition in possible_replace_none:
+            # Build a new initial state for the current combination
+            possible_conditions = initial_values.copy()
+            for idx, node in enumerate(none_nodes):
+                possible_conditions[node] = condition[idx]
+
+            # Ensure we haven't already visited this state
+            trial_state_key = tuple(sorted(possible_conditions.items()))
+            if trial_state_key in visited_states:
+                continue
+            visited_states.add(trial_state_key)
+            possible_actions.append(possible_conditions)
         # For simplicity, let's assume actions are flipping the value of a node
-        return list(state.keys())
+        return possible_actions
 
     def get_reward(self, state, action, next_state):
         """
@@ -108,20 +128,21 @@ class QLearningAgent:
         new_q = current_q + self.alpha * (reward + self.gamma * max_next_q - current_q)
         self.q_table[(state_key, action)] = new_q
 
-    def train(self, episodes):
+    def train(self, episodes, initial_values = initial_values):
         """
         Train the Q-learning agent over a number of episodes.
 
         :param episodes: The number of episodes to train.
         """
         for episode in range(episodes):
-            state = self.get_initial_state()  # Get the initial state of the network
+            state = self.get_initial_state(initial_values = initial_values)  # Get the initial state of the network
             done = False
 
             # Choose an action
             action = self.choose_action(state)
-
-            while not done:
+            state = action
+            i = 0
+            while not done & i<10:
                 # Take the action and observe the next state and reward
                 next_state = evaluate_state(state, self.primes, self.edge_functions)
                 reward = self.get_reward(state, action, next_state)
@@ -134,14 +155,15 @@ class QLearningAgent:
 
                 # Check if the episode is done
                 done = self.is_terminal_state(state)
+                i += 1
 
-    def get_initial_state(self):
+    def get_initial_state(self, initial_values):
         """
         Define the initial state of the network.
 
         :return: The initial state.
         """
-        return {node: 0 for node in self.primes.keys()}
+        return {node: v for node, v in initial_values.items()}
 
     def is_terminal_state(self, state):
         """

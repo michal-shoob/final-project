@@ -97,11 +97,6 @@ def evaluate_state(state, primes, edge_functions):
     return new_state
 
 
-from itertools import product
-
-
-from itertools import product
-
 
 def find_initial_conditions(primes, target_values, nodes, edge_functions, initial_state, max_iterations=100, agent=None):
     """
@@ -127,28 +122,28 @@ def find_initial_conditions(primes, target_values, nodes, edge_functions, initia
     none_nodes = [node for node in nodes if initial_state.get(node) is None]
 
     # All possible combinations of 0/1 for the nodes that are None
-    possible_conditions = list(product([0, 1], repeat=len(none_nodes)))
+    possible_replace_none = list(product([0, 1], repeat=len(none_nodes)))
 
     valid_initial_conditions = []
     visited_states = set()
     print("initial_state:", initial_state)
     print("none_nodes:", none_nodes)
-    print("possible_conditions:", possible_conditions)
+    print("possible_replace_none:", possible_replace_none)
 
-    for condition in possible_conditions:
+    for condition in possible_replace_none:
         # Build a new initial state for the current combination
-        trial_state = initial_state.copy()
+        possible_conditions = initial_state.copy()
         for idx, node in enumerate(none_nodes):
-            trial_state[node] = condition[idx]
+            possible_conditions[node] = condition[idx]
 
         # Ensure we haven't already visited this state
-        trial_state_key = tuple(sorted(trial_state.items()))
+        trial_state_key = tuple(sorted(possible_conditions.items()))
         if trial_state_key in visited_states:
             continue
         visited_states.add(trial_state_key)
 
-        print(f"\n--- Testing initial condition: {trial_state} ---")
-        current_state = trial_state.copy()
+        print(f"\n--- Testing initial condition: {possible_conditions} ---")
+        current_state = possible_conditions.copy()
         intermediate_states = []
 
         # Update the network until it stabilizes or the maximum iterations are reached
@@ -174,7 +169,7 @@ def find_initial_conditions(primes, target_values, nodes, edge_functions, initia
         if all(current_state[node] == val for node, val in target_values.items()):
             # If yes – add the valid initial condition to the list
             valid_initial_conditions.append({
-                "initial_condition": trial_state.copy(),
+                "initial_condition": possible_conditions.copy(),
                 "final_state": current_state.copy(),
                 "intermediate_states": intermediate_states
             })
