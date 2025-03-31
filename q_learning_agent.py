@@ -165,7 +165,7 @@ class QLearningAgent:
             action = self.choose_action(state)
             state = action
             i = 0
-            while not done & i < 10:
+            while not done and i < 10:
                 # Take the action and observe the next state and reward
                 next_state = evaluate_state(state, self.primes, self.edge_functions)
                 reward = self.get_reward(state, action, next_state)
