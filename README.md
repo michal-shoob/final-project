@@ -9,8 +9,8 @@ To set up the project, follow these steps:
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/yourusername/yourproject.git
-   cd yourproject
+   git clone https://github.com/michal-shoob/final-project.git
+   cd final-project
     ```
 2. Install the required dependencies:
    ```bash
@@ -22,18 +22,23 @@ To set up the project, follow these steps:
 ```
 project_name/
 │
-├── src/                # Source code
-│   ├── main.py         # Entry point (example) - main
-│   └── utils/          # Utility functions or modules - boolean_network, q_learning_agent, agent
+├── src/                      # Source code
+│   ├── main.py               # Main entry point
+│   ├── boolean_network.py    # Boolean network implementation
+│   ├── q_learning_agent.py   # Q-learning agent implementation
+│   └── utils/                # Utility functions or modules 
 │
-├── tests/              # Unit and integration tests
+├── tests/                    # Unit and integration tests
 │
-├── data/               # Datasets or input files (if any)
+├── data/                     # Datasets or input files (if any)
 │
-|--- Screenshots        # Output 1 : network_states, table_visualization
-
+├── results/                  # Output files and visualizations
+│   ├── network_states/       # State evolution diagrams
+│   └── q_tables/             # Learned Q-table visualizations
+|--- Screenshots              # Output 1 : network_states, table_visualization
 │
-└── README.md           # Project documentation (this file)
+├── requirements.txt          # Dependencies
+└── README.md                 # Project documentation (this file)
 ```
 
 ---
