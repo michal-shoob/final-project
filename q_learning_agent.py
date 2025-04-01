@@ -1,11 +1,10 @@
 import numpy as np
 from boolean_network import primes, edge_functions, target_values, nodes, evaluate_state, find_initial_conditions
-from boolean_network import initial_values
 from itertools import product
 
 
 class QLearningAgent:
-    def __init__(self, primes, edge_functions, target_values, alpha=0.1, gamma=0.9, epsilon=0.1):
+    def __init__(self, primes, edge_functions, target_values, initial_values, alpha=0.1, gamma=0.9, epsilon=0.1):
         """
         Initialize the Q-learning agent.
 
@@ -19,13 +18,14 @@ class QLearningAgent:
         self.primes = primes
         self.edge_functions = edge_functions
         self.target_values = target_values
+        self.initial_values = initial_values
         self.alpha = alpha
         self.gamma = gamma
         self.epsilon = epsilon
 
         # Initialize Q-table as a dictionary
         self.q_table = {}  # Key: (state, action), Value: Q-value
-        for node, value in initial_values.items():
+        for node, value in self.initial_values.items():
             if value is None:  # Only for controllable nodes
                 self.q_table[(node, 0)] = 0.5  # Q-value for setting node to 0
                 self.q_table[(node, 1)] = 0.5  # Q-value for setting node to 1
@@ -84,7 +84,7 @@ class QLearningAgent:
         :return: A list of possible actions.
         """
         # Nodes with a value of None – we will generate all combinations for these nodes
-        none_nodes = [node for node in nodes if initial_values.get(node) is None]
+        none_nodes = [node for node in nodes if self.initial_values.get(node) is None]
 
         # All possible combinations of 0/1 for the nodes that are None
         possible_replace_none = list(product([0, 1], repeat=len(none_nodes)))
@@ -92,7 +92,7 @@ class QLearningAgent:
         visited_states = set()
         for condition in possible_replace_none:
             # Build a new initial state for the current combination
-            possible_conditions = initial_values.copy()
+            possible_conditions = self.initial_values.copy()
             for idx, node in enumerate(none_nodes):
                 possible_conditions[node] = condition[idx]
 
@@ -151,14 +151,14 @@ class QLearningAgent:
 
         print(f"\nUpdated Q({state_key}, {action_key}) from {current_q} to {new_q}")  # Debug
 
-    def train(self, episodes, initial_values=initial_values):
+    def train(self, episodes):
         """
         Train the Q-learning agent over a number of episodes.
 
         :param episodes: The number of episodes to train.
         """
         for episode in range(episodes):
-            state = self.get_initial_state(initial_values=initial_values)  # Get the initial state of the network
+            state = self.get_initial_state()  # Get the initial state of the network
             done = False
 
             # Choose an action
@@ -180,13 +180,13 @@ class QLearningAgent:
                 done = self.is_terminal_state(state)
                 i += 1
 
-    def get_initial_state(self, initial_values):
+    def get_initial_state(self):
         """
         Define the initial state of the network.
 
         :return: The initial state.
         """
-        return {node: v for node, v in initial_values.items()}
+        return {node: v for node, v in self.initial_values.items()}
 
     def is_terminal_state(self, state):
         """
