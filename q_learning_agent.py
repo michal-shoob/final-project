@@ -22,6 +22,7 @@ class QLearningAgent:
         self.alpha = alpha
         self.gamma = gamma
         self.epsilon = epsilon
+        self.current_state = initial_values.copy()  # Initialize current state
 
         # Initialize Q-table as a dictionary
         self.q_table = {}  # Key: (state, action), Value: Q-value
@@ -43,13 +44,17 @@ class QLearningAgent:
         """
         return tuple(state.items())  # Convert dictionary to tuple of items
 
-    def choose_action(self, state):
+    def choose_action(self, state=None):
         """
         Choose an action using an epsilon-greedy policy.
 
         :param state: The current state of the Boolean network.
         :return: The chosen action.
         """
+        if state is None:
+            state = self.current_state
+
+        # Get possible actions based on the current state
         possible_actions = self.get_possible_actions(state)
         state_key = self.get_state_key(state)
         # Debugging print
@@ -74,17 +79,22 @@ class QLearningAgent:
             max_actions = [a for a, q in zip(possible_actions, action_q_values) if q == max_q]
             best_actions = np.random.choice(max_actions)
             print(f"Best actions: {best_actions}")  # Debug
+            # Update current state to reflect the chosen action
+            self.current_state = best_actions.copy()
             return best_actions
 
-    def get_possible_actions(self, state):
+    def get_possible_actions(self, state=None):
         """
         Define possible actions based on the current state.
 
         :param state: The current state of the Boolean network.
         :return: A list of possible actions.
         """
+        if state is None:
+            state = self.current_state
+
         # Nodes with a value of None – we will generate all combinations for these nodes
-        none_nodes = [node for node in nodes if self.initial_values.get(node) is None]
+        none_nodes = [node for node in nodes if state.get(node) is None]
 
         # All possible combinations of 0/1 for the nodes that are None
         possible_replace_none = list(product([0, 1], repeat=len(none_nodes)))
@@ -92,7 +102,7 @@ class QLearningAgent:
         visited_states = set()
         for condition in possible_replace_none:
             # Build a new initial state for the current combination
-            possible_conditions = self.initial_values.copy()
+            possible_conditions = state.copy()
             for idx, node in enumerate(none_nodes):
                 possible_conditions[node] = condition[idx]
 
@@ -130,12 +140,12 @@ class QLearningAgent:
         :param next_state: The next state.
         """
         # Convert states to hashable keys
-        state_key = self.get_state_key(state)
+        state_key = self.get_state_key(self.current_state)
         next_state_key = self.get_state_key(next_state)
 
         # Debugging print
         print("\n--- Updating Q-table ---")  # Debug
-        print(f"State: {state}, Action: {action}, Reward: {reward}, Next State: {next_state}")
+        print(f"State: {self.current_state}, Action: {action}, Reward: {reward}, Next State: {next_state}")
 
         # Calculate Q-update for each node-action pair in the action
         for node, action_value in action.items():
@@ -158,9 +168,7 @@ class QLearningAgent:
             self.q_table[(node, action_value)] = new_q
             print(f"Updated Q({node}, {action_value}) from {current_q} to {new_q}")
 
-            print("Q-table updated")
-
-
+        print("Q-table updated")
 
     def train(self, episodes):
         """
@@ -169,26 +177,25 @@ class QLearningAgent:
         :param episodes: The number of episodes to train.
         """
         for episode in range(episodes):
-            state = self.get_initial_state()  # Get the initial state of the network
+            self.current_state = self.get_initial_state()  # Get the initial state of the network
             done = False
 
             # Choose an action
-            action = self.choose_action(state)
-            state = action
+            action = self.choose_action(self.current_state)
             i = 0
             while not done and i < 10:
                 # Take the action and observe the next state and reward
-                next_state = evaluate_state(state, self.primes, self.edge_functions)
-                reward = self.get_reward(state, action, next_state)
+                next_state = evaluate_state(self.current_state, self.primes, self.edge_functions)
+                reward = self.get_reward(self.current_state, action, next_state)
 
                 # Update the Q-table
-                self.update_q_table(state, action, reward, next_state)
+                self.update_q_table(self.current_state, action, reward, next_state)
 
                 # Transition to the next state
-                state = next_state
+                self.current_state = next_state.copy()
 
                 # Check if the episode is done
-                done = self.is_terminal_state(state)
+                done = self.is_terminal_state()
                 i += 1
 
     def get_initial_state(self):
@@ -199,14 +206,13 @@ class QLearningAgent:
         """
         return {node: v for node, v in self.initial_values.items()}
 
-    def is_terminal_state(self, state):
+    def is_terminal_state(self):
         """
         Check if the state is terminal (i.e., matches the target values).
 
-        :param state: The current state.
         :return: True if the state is terminal, False otherwise.
         """
-        terminal = all(state[node] == value for node, value in self.target_values.items())
+        terminal = all(self.current_state.get(node) == value for node, value in self.target_values.items())
         print(f"\nTerminal state check: {terminal}")  # Debug
         return terminal
 
