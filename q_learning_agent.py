@@ -129,27 +129,38 @@ class QLearningAgent:
         :param reward: The reward received.
         :param next_state: The next state.
         """
+        # Convert states to hashable keys
         state_key = self.get_state_key(state)
         next_state_key = self.get_state_key(next_state)
-        action_key = tuple(sorted(action.items()))  # Ensure consistent key format
 
         # Debugging print
         print("\n--- Updating Q-table ---")  # Debug
         print(f"State: {state}, Action: {action}, Reward: {reward}, Next State: {next_state}")
 
-        # Get the current Q-value - Q(s,a):
-        current_q = self.q_table.get((state_key, action_key), 0)
+        # Calculate Q-update for each node-action pair in the action
+        for node, action_value in action.items():
+            # Only update controllable nodes (those with initial_value=None)
+            if self.initial_values.get(node) is not None:
+                continue
 
-        # Get the maximum Q-value for the next state- max_a Q(s',a):
-        possible_actions = self.get_possible_actions(next_state)
-        max_next_q = max([self.q_table.get((next_state_key, tuple(sorted(a.items()))), 0) for a in possible_actions])
+            # Current Q-value for this node-action pair - Q(s,a):
+            current_q = self.q_table.get((node, action_value), 0.5)  # Default to 0.5 if not found
 
-        # Update the Q-value using the Q-learning formula
-        # new Q(s,a) <- Q(s,a) + alpha [R + gamma * max_a Q(s',a)-Q(s,a)]
-        new_q = current_q + self.alpha * (reward + self.gamma * max_next_q - current_q)
-        self.q_table[(state_key, action)] = new_q
+            # Find best Q-value for this node in next state - max_a Q(s',a):
+            max_next_q = max(
+                self.q_table.get((node, 0), 0.5),
+                self.q_table.get((node, 1), 0.5)
+            )
 
-        print(f"\nUpdated Q({state_key}, {action_key}) from {current_q} to {new_q}")  # Debug
+            # Q-learning update
+            # new Q(s,a) <- Q(s,a) + alpha [R + gamma * max_a Q(s',a)-Q(s,a)]
+            new_q = current_q + self.alpha * (reward + self.gamma * max_next_q - current_q)
+            self.q_table[(node, action_value)] = new_q
+            print(f"Updated Q({node}, {action_value}) from {current_q} to {new_q}")
+
+            print("Q-table updated")
+
+
 
     def train(self, episodes):
         """
