@@ -118,7 +118,6 @@ class QLearningAgent:
 
             max_q = max(action_values)
             best_actions = [a for a, q in zip(possible_actions, action_values) if q == max_q]
-            self.current_state = best_actions.copy()
             return np.random.choice(best_actions)
 
     def get_possible_actions(self, state=None):
@@ -236,7 +235,7 @@ class QLearningAgent:
                 for node, value in action.items():
                     next_state[node] = value
                 # Evaluate the next state using the Boolean network update rules
-                next_state = evaluate_state(self.current_state, self.primes, self.edge_functions)
+                # next_state = evaluate_state(self.current_state, self.primes, self.edge_functions)
                 reward = self.get_reward(self.current_state, action, next_state)
 
                 # Update the Q-table
