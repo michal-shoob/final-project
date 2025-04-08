@@ -7,6 +7,17 @@ from agent import Agent, next_graph_state
 from q_learning_agent import QLearningAgent
 import matplotlib.pyplot as plt
 import pandas as pd
+import argparse
+
+def parse_arguments():
+    """
+    Parse command-line arguments.
+
+    :return: Parsed arguments.
+    """
+    parser = argparse.ArgumentParser(description="Boolean Network Simulation")
+    parser.add_argument("--epsilon", type=float, default=0.1, help="Epsilon value for exploration")
+    return parser.parse_args()
 
 
 def initialize_graph():
@@ -49,9 +60,10 @@ def main():
     #     graph = next_graph_state(graph, primes, edge_functions)
     #
     # print("\nFinal node states:", nx.get_node_attributes(graph, "state"))
+    args = parse_arguments()
 
     # Create and train the Q-learning agent
-    q_agent = QLearningAgent(primes, edge_functions, target_values, initial_values)
+    q_agent = QLearningAgent(primes, edge_functions, target_values, initial_values, epsilon=args.epsilon)
     q_agent.train(episodes=1000)
 
     # Find initial conditions using the trained Q-learning agent

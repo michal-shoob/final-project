@@ -30,6 +30,7 @@ class QLearningAgent:
 
         # Initialize Q-table with all possible state-action pairs
         self.q_table = self.initialize_q_table()
+        print(f"Initial Q-table: {self.q_table}")  # Debug
 
     def initialize_q_table(self):
         """Initialize Q-table considering only None-valued nodes for actions"""
@@ -38,6 +39,12 @@ class QLearningAgent:
         # Generate all possible network states (2^n possible states)
         all_nodes = list(self.primes.keys())
         state_space = list(product([0, 1], repeat=len(all_nodes)))
+        initial_state_tuple = tuple(self.initial_values)
+        # Ensure the initial state is included in the state space
+        if initial_state_tuple not in state_space:
+            state_space.append(initial_state_tuple)
+        # Remove duplicates
+        state_space = list(set(state_space))
 
         # Generate action space only for controllable nodes
         action_space = list(product([0, 1], repeat=len(self.controllable_nodes)))
@@ -52,25 +59,13 @@ class QLearningAgent:
                 action_key = self.get_action_key(action)  # Only need controllable nodes here
 
                 # Initialize Q-values
-                if self.is_terminal_state(state):  # Pass the state we're evaluating
-                    q_table[(state_key, action_key)] = 0.0  # Terminal state
-                else:
+                #if self.is_terminal_state(state):  # Pass the state we're evaluating
+                #    q_table[(state_key, action_key)] = 0.0  # Terminal state
+                #else:
                     # Initialize with small positive values to encourage exploration
-                    q_table[(state_key, action_key)] = np.random.uniform(0, 0.1)
+                q_table[(state_key, action_key)] = 0.0
 
         return q_table
-
-
-        # # Initialize Q-table as a dictionary
-        # self.q_table = {}  # Key: (state, action), Value: Q-value
-        # for node, value in self.initial_values.items():
-        #     if value is None:  # Only for controllable nodes
-        #         self.q_table[(node, 0)] = 0.5  # Q-value for setting node to 0
-        #         self.q_table[(node, 1)] = 0.5  # Q-value for setting node to 1
-        #     else:  # For fixed nodes
-        #         self.q_table[(node, value)] = 1.0  # Max Q-value for fixed values
-
-        #print(f"Initial Q-table: {self.q_table}")  # Debug
 
     def get_state_key(self, state):
         """
@@ -161,9 +156,13 @@ class QLearningAgent:
         :return: The reward.
         """
         reward = 0
-        for node, target in self.target_values.items():
-            if next_state[node] == target:
-                reward += 1 / len(self.target_values)  # Normalized reward
+        if self.is_terminal_state(next_state):
+            reward = 1.0  # Terminal state reward
+        else:
+            reward = -1.0  # Non-terminal state reward
+            # for node, target in self.target_values.items():
+            #     if next_state[node] == target:
+            #         reward = (1 / len(self.target_values))/10  # Normalized reward
         print(f"\nReward calculated: {reward}")  # Debug
         return reward
 
@@ -182,8 +181,8 @@ class QLearningAgent:
         next_state_key = self.get_state_key(next_state)
 
         # Debugging print
-        print("\n--- Updating Q-table ---")  # Debug
-        print(f"State: {state}, Action: {action}, Reward: {reward}, Next State: {next_state}")
+        #print("\n--- Updating Q-table ---")  # Debug
+        #print(f"State: {state}, Action: {action}, Reward: {reward}, Next State: {next_state}")
 
         # Get current Q-value (initialize if not present) - Q(s,a):
         current_q = self.q_table.get((state_key, action_key), 0.0)  # Default small value
@@ -211,8 +210,6 @@ class QLearningAgent:
         print(f"Current Q: {current_q:.3f}")
         print(f"Max next Q: {max_next_q:.3f}")
         print(f"Updated Q: {new_q:.3f}")
-        print(f"Learning rate (α): {self.alpha}")
-        print(f"Discount factor (γ): {self.gamma}")
 
     def train(self, episodes):
         """
@@ -226,27 +223,36 @@ class QLearningAgent:
 
             # Choose an action
             action = self.choose_action(self.current_state)
-            self.current_state = action.copy()  # Update current state with the chosen action
             i = 0
             while not done and i < 10:
                 # Take the action and observe the next state and reward
-                # Apply action to get new state
-                next_state = self.current_state.copy()
-                for node, value in action.items():
-                    next_state[node] = value
-                # Evaluate the next state using the Boolean network update rules
-                # next_state = evaluate_state(self.current_state, self.primes, self.edge_functions)
+                if i == 0:
+                    # Apply action to get new state
+                    next_state = action.copy()
+                else:
+                    # Evaluate the next state using the Boolean network update rules
+                    next_state = evaluate_state(self.current_state, self.primes, self.edge_functions)
                 reward = self.get_reward(self.current_state, action, next_state)
 
                 # Update the Q-table
                 self.update_q_table(self.current_state, action, reward, next_state)
 
+                # Check if the state has stabilized
+                done = (self.current_state == next_state)
+
                 # Transition to the next state
                 self.current_state = next_state.copy()
-
-                # Check if the episode is done
-                done = self.is_terminal_state()
                 i += 1
+
+            # After the episode ends, check if the final state is terminal
+            if self.is_terminal_state(self.current_state):
+                final_reward = 1.0
+            else:
+                final_reward = -1.0
+
+            # Update Q-table for the last action taken
+            initial_state = self.get_initial_state()  # Get the initial state of the network
+            self.update_q_table(initial_state, action, final_reward, action)
 
     def get_initial_state(self):
         """
@@ -256,7 +262,7 @@ class QLearningAgent:
         """
         return {node: v for node, v in self.initial_values.items()}
 
-    def is_terminal_state(self, state = None):
+    def is_terminal_state(self, state=None):
         """
         Check if the state is terminal (i.e., matches the target values).
 
