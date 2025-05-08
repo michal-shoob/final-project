@@ -26,6 +26,7 @@ project_name/
 │   ├── main.py               # Main entry point
 │   ├── boolean_network.py    # Boolean network implementation
 │   ├── q_learning_agent.py   # Q-learning agent implementation
+│   ├── logger_setup.py       # Logging setup
 │   └── utils/                # Utility functions or modules 
 │
 ├── tests/                    # Unit and integration tests

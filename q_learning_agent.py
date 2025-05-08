@@ -1,6 +1,9 @@
 import numpy as np
 from boolean_network import primes, edge_functions, target_values, nodes, evaluate_state, find_initial_conditions
 from itertools import product
+import logging
+from logger_setup import setup_logger
+
 
 
 class QLearningAgent:
@@ -46,13 +49,16 @@ class QLearningAgent:
 
         # Initialize Q-table with all possible state-action pairs
         self.q_table = self.initialize_q_table()
-        print(f"Initial Q-table: {self.q_table}")  # Debug
+
+        logging.debug(f"Initial Q-table: {self.q_table}")  # Debug
 
     def initialize_q_table(self):
         """Initialize Q-table considering only None-valued nodes for actions"""
         # Generate all possible states (2^n possible states)
         state_space = list(product([0, 1], repeat=len(self.primes)))
-        q_table = np.zeros((len(state_space)))  # Initialize Q-table with zeros
+        q_table= {
+            tuple(zip(self.primes, state)): 0.0 for state in state_space
+        }
         return q_table
 
     def get_state_key(self, state):
@@ -83,8 +89,7 @@ class QLearningAgent:
         # Get possible actions
         action_space = self.action_space
         # Debugging print
-        print(f"\n Possible actions: {len(action_space)}")
-        possible_actions = [dict(zip(self.primes, action)) for action in action_space]
+        logging.debug(f"\n Possible actions: {len(action_space)}")
         # Evaluate actions based on their Q-values
         action_values = []
         for action in action_space:
@@ -92,7 +97,7 @@ class QLearningAgent:
                 action_key = self.get_state_key(action)
                 action_values.append(self.q_table[action_key])  # Default small value if not present)
             except Exception as e:
-                print(f"Error processing action {action}: {str(e)}")
+                logging.error(f"Error processing action {action}: {str(e)}")
                 action_values.append(0.0)  # Fallback value
 
         # Epsilon-greedy action selection
@@ -101,7 +106,7 @@ class QLearningAgent:
             return np.random.choice(action_space)
         else:
             max_q = max(action_values)
-            best_actions = [a for a, q in zip(possible_actions, action_values) if q == max_q]
+            best_actions = [a for a, q in zip(action_space, action_values) if q == max_q]
             return np.random.choice(best_actions)
 
     def get_possible_actions(self, state=None):
@@ -135,7 +140,7 @@ class QLearningAgent:
             possible_actions.append(possible_conditions)
         return possible_actions
 
-    def get_reward(self, state, action, next_state):
+    def get_reward(self, state, next_state):
         """
         Calculate the reward based on the target values.
 
@@ -152,7 +157,7 @@ class QLearningAgent:
             # for node, target in self.target_values.items():
             #     if next_state[node] == target:
             #         reward = (1 / len(self.target_values))/10  # Normalized reward
-        print(f"\nReward calculated: {reward}")  # Debug
+        logging.debug(f"\nReward calculated: {reward}")  # Debug
         return reward
 
     def update_q_table(self, state, reward, next_state):
@@ -169,7 +174,7 @@ class QLearningAgent:
         next_state_key = self.get_state_key(next_state)
 
         # Debugging print
-        #print("\n--- Updating Q-table ---")  # Debug
+        logging.info("\n--- Updating Q-table ---")  # Debug
         #print(f"State: {state}, Action: {action}, Reward: {reward}, Next State: {next_state}")
 
         # Get current Q-value (initialize if not present) - Q(s):
@@ -183,12 +188,12 @@ class QLearningAgent:
         self.q_table[(state_key)] = new_q
 
         # Debug output
-        print(f"\n--- Q-table Update ---")
-        print(f"State: {state}")
-        print(f"Reward: {reward}")
-        print(f"Next state: {next_state}")
-        print(f"Current Q: {current_q:.3f}")
-        print(f"Updated Q: {new_q:.3f}")
+        #(f"\n--- Q-table Update ---")
+        #print(f"State: {state}")
+        #print(f"Reward: {reward}")
+        #print(f"Next state: {next_state}")
+        #print(f"Current Q: {current_q:.3f}")
+        #print(f"Updated Q: {new_q:.3f}")
 
     def train(self, episodes):
         """
@@ -196,6 +201,7 @@ class QLearningAgent:
 
         :param episodes: The number of episodes to train.
         """
+        setup_logger()
         for episode in range(episodes):
             done = False
 
@@ -203,11 +209,11 @@ class QLearningAgent:
             action = self.choose_action()
             self.current_state = action     # Use the action to set the current state
             steps = 0
-            intermediate_states = []
+            intermediate_states = [action]
             while not done and steps < 10:
                 # Evaluate the next state using the Boolean network update rules
                 next_state = evaluate_state(self.current_state, self.primes, self.edge_functions)
-                reward = self.get_reward(self.current_state, action, next_state)
+                reward = self.get_reward(self.current_state, next_state)
 
                 # Update the Q-table
                 self.update_q_table(self.current_state, reward, next_state)
@@ -221,7 +227,6 @@ class QLearningAgent:
                 # Transition to the next state
                 self.current_state = next_state.copy()
                 steps += 1
-
             # After the episode ends, check if the final state is terminal
             if self.is_terminal_state(self.current_state):
                 final_reward = 1.0
@@ -233,7 +238,13 @@ class QLearningAgent:
             #    self.update_q_table(state, final_reward, state)
 
             # Update Q-table for the last action taken
-            self.update_q_table(action, final_reward, intermediate_states[0])
+            for i in range(len(intermediate_states)):
+                current_state = intermediate_states[i]
+                if i < len(intermediate_states) - 1:
+                    next_state = intermediate_states[i + 1]
+                else:
+                    next_state = self.current_state  # Use the final state
+                self.update_q_table(current_state, final_reward, next_state)
 
     def get_initial_state(self):
         """
@@ -253,7 +264,7 @@ class QLearningAgent:
             state = self.current_state
 
         terminal = all(state.get(node, None) == target for node, target in self.target_values.items())
-        print(f"\nTerminal state check: {terminal}")  # Debug
+        logging.debug(f"\nTerminal state check: {terminal}")  # Debug
         return terminal
 
     def get_optimal_policy(self):
