@@ -9,7 +9,8 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import argparse
 import logging
-from logger_setup import setup_logger
+from logger_setup import logger
+
 
 
 def parse_arguments():
@@ -47,7 +48,6 @@ def main():
     """
     Main function to run the simulation.
     """
-    setup_logger()
     # Initialize the graph
     graph = initialize_graph()
 

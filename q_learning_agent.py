@@ -2,7 +2,7 @@ import numpy as np
 from boolean_network import primes, edge_functions, target_values, nodes, evaluate_state, find_initial_conditions
 from itertools import product
 import logging
-from logger_setup import setup_logger
+from logger_setup import logger
 
 
 
@@ -186,14 +186,8 @@ class QLearningAgent:
         # new V(s) <- V(s) + alpha [R + gamma * V(s')-V(s)]
         new_q = current_q + self.alpha * (reward + self.gamma * next_state_value - current_q)
         self.q_table[(state_key)] = new_q
+        logging.debug(f"\n Q-table in state {state_key} updated to: {new_q}")  # Debug
 
-        # Debug output
-        #(f"\n--- Q-table Update ---")
-        #print(f"State: {state}")
-        #print(f"Reward: {reward}")
-        #print(f"Next state: {next_state}")
-        #print(f"Current Q: {current_q:.3f}")
-        #print(f"Updated Q: {new_q:.3f}")
 
     def train(self, episodes):
         """
@@ -201,13 +195,15 @@ class QLearningAgent:
 
         :param episodes: The number of episodes to train.
         """
-        setup_logger()
+
+
         for episode in range(episodes):
             done = False
 
             # Choose an action
             action = self.choose_action()
             self.current_state = action     # Use the action to set the current state
+            logging.debug(f"\n action checks: {action}")  # Debug
             steps = 0
             intermediate_states = [action]
             while not done and steps < 10:
