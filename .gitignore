@@ -1,3 +1,7 @@
 .idea/final-project.iml
 .idea/misc.xml
 __pycache__/q_learning_agent.cpython-310.pyc
+# Large log files
+app.log.1
+app.log.3
+*.log

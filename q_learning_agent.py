@@ -1,5 +1,5 @@
 import numpy as np
-from boolean_network import primes, edge_functions, target_values, nodes, evaluate_state, find_initial_conditions
+from boolean_network import primes_2, edge_functions_2, target_values_2, nodes_2, evaluate_state, find_initial_conditions
 from itertools import product
 import logging
 from logger_setup import logger
@@ -202,11 +202,13 @@ class QLearningAgent:
 
             # Choose an action
             action = self.choose_action()
+            if action == self.current_state:
+                done =  True
             self.current_state = action     # Use the action to set the current state
             logging.debug(f"\n action checks: {action}")  # Debug
             steps = 0
             intermediate_states = [action]
-            while not done and steps < 10:
+            while not done and steps < 20:
                 # Evaluate the next state using the Boolean network update rules
                 next_state = evaluate_state(self.current_state, self.primes, self.edge_functions)
                 reward = self.get_reward(self.current_state, next_state)
@@ -232,7 +234,7 @@ class QLearningAgent:
             # for state in intermediate_states:
                 # Update Q-table for each intermediate state
             #    self.update_q_table(state, final_reward, state)
-
+            logging.info("\n--- Finish try, update final reward ---")  # Debug
             # Update Q-table for the last action taken
             for i in range(len(intermediate_states)):
                 current_state = intermediate_states[i]

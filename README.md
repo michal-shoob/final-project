@@ -58,7 +58,10 @@ Run the project using the following steps:
    python src/main.py --arg1 value1 --arg2 value2
    ```
 
-3. **Example**:
-   Provide a simple example of input/output if relevant.
+   3. **Example**:
+    ```bash
+   python src/main.py --num_episodes 1000 --learning_rate 0.1
+   ```
+   This command runs the Q-learning agent for 1000 episodes with a learning rate of 0.1.
 
 ---

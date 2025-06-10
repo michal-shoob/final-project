@@ -2,7 +2,7 @@ import networkx as nx
 import os
 from PIL import Image as PILImage  # For standalone scripts
 from IPython.display import display, Image as IPythonImage
-from boolean_network import primes, edge_functions, target_values, nodes,evaluate_state, find_initial_conditions,initial_values
+from boolean_network import primes_2, edge_functions_2, target_values_2, nodes_2,evaluate_state, find_initial_conditions,initial_values_2
 from agent import Agent, next_graph_state
 from q_learning_agent import QLearningAgent
 import matplotlib.pyplot as plt
@@ -49,7 +49,7 @@ def main():
     Main function to run the simulation.
     """
     # Initialize the graph
-    graph = initialize_graph()
+    #graph = initialize_graph()
 
     # Create an agent
     #agent = Agent(agent_id=1, graph=graph, position="V1")
@@ -67,11 +67,11 @@ def main():
     args = parse_arguments()
 
     # Create and train the Q-learning agent
-    q_agent = QLearningAgent(primes, edge_functions, target_values, initial_values, epsilon=args.epsilon)
+    q_agent = QLearningAgent(primes_2, edge_functions_2, target_values_2, initial_values_2, epsilon=args.epsilon)
     q_agent.train(episodes=1000)
 
     # Find initial conditions using the trained Q-learning agent
-    valid_initial_conditions = find_initial_conditions(primes, target_values, nodes, edge_functions,initial_values, max_iterations=100)
+    #valid_initial_conditions = find_initial_conditions(primes, target_values, nodes, edge_functions,initial_values, max_iterations=100)
 
     # Print results
     # Function to display images
