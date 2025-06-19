@@ -2,3 +2,4 @@
 .idea/misc.xml
 __pycache__/
 *.log
+app.log.*
