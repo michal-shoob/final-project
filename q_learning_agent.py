@@ -1,4 +1,5 @@
 import numpy as np
+from boolean_network import primes_3, edge_functions_3, target_values_3, nodes_3
 from boolean_network import primes_2, edge_functions_2, target_values_2, nodes_2, evaluate_state, find_initial_conditions
 from itertools import product
 import logging
@@ -30,7 +31,7 @@ class QLearningAgent:
         # Identify controllable nodes (those with None in initial_values)
         self.controllable_nodes = [node for node, val in initial_values.items() if val is None]
         self.fixed_nodes = {node: val for node, val in initial_values.items() if val is not None}
-        possible_replace_none = list(product([0, 1], repeat=len(self.controllable_nodes)))
+        possible_replace_none = product([0,1], repeat=len(self.controllable_nodes))
         possible_actions = []
         visited_states = set()
         for condition in possible_replace_none:
@@ -68,7 +69,7 @@ class QLearningAgent:
         :param state: The current state of the Boolean network.
         :return: A hashable key representing the state.
         """
-        return tuple(sorted(state.items()))  # Convert state dictionary to immutable tuple
+        return tuple((k, state[k]) for k in self.primes)  # Convert state dictionary to immutable tuple
 
     def get_action_key(self, action):
         """

@@ -3,6 +3,7 @@ import os
 from PIL import Image as PILImage  # For standalone scripts
 from IPython.display import display, Image as IPythonImage
 from boolean_network import primes_2, edge_functions_2, target_values_2, nodes_2,evaluate_state, find_initial_conditions,initial_values_2
+from boolean_network import primes_3, edge_functions_3, target_values_3,initial_values_3
 from agent import Agent, next_graph_state
 from q_learning_agent import QLearningAgent
 import matplotlib.pyplot as plt
@@ -67,8 +68,8 @@ def main():
     args = parse_arguments()
 
     # Create and train the Q-learning agent
-    q_agent = QLearningAgent(primes_2, edge_functions_2, target_values_2, initial_values_2, epsilon=args.epsilon)
-    q_agent.train(episodes=1000)
+    q_agent = QLearningAgent(primes_3, edge_functions_3, target_values_3, initial_values_3, epsilon=args.epsilon)
+    q_agent.train(episodes=100)
 
     # Find initial conditions using the trained Q-learning agent
     #valid_initial_conditions = find_initial_conditions(primes, target_values, nodes, edge_functions,initial_values, max_iterations=100)
