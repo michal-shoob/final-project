@@ -1,6 +1,4 @@
 import numpy as np
-from boolean_network import primes_3, edge_functions_3, target_values_3, nodes_3
-from boolean_network import primes_2, edge_functions_2, target_values_2, nodes_2, evaluate_state, find_initial_conditions
 from itertools import product
 import logging
 from logger_setup import logger
@@ -141,6 +139,46 @@ class QLearningAgent:
             possible_actions.append(possible_conditions)
         return possible_actions
 
+    def evaluate_state(self, state):
+
+        #Evaluates the next state of the network according to the primes and edge functions.
+        
+        new_state = state.copy()
+
+        # Evaluate primes (node functions)
+        #print("\nEvaluating node functions:")
+        for node, func in self.primes.items():
+            if isinstance(func, str):  # if the function is a string
+                try:
+                    # Do not replace AND and OR for node functions, as they are used for boolean logic
+                    new_state[node] = eval(func, {},new_state)
+                    #print(f"Node {node}: {func} => {new_state[node]}")
+                except Exception as e:
+                    print(f"Warning: Error evaluating function for node {node}. Error: {e}")
+                    new_state[node] = 0  # Default value
+            elif callable(func):  # if the function is callable
+                new_state[node] = func(state)
+                #print(f"Node {node} callable: {new_state[node]}")
+            else:  # Here we handle the case where the function is a simple value (like a constant)
+                new_state[node] = state[node]  # The state doesn't change for simple nodes
+                #print(f"Node {node} simple value: {new_state[node]}")
+
+        # Now, evaluate the edge functions (between nodes)
+        #print("\nEvaluating edge functions:")
+        for (start_node, end_node), edge_func in self.edge_functions.items():
+            # Check if start_node is in the current state and the end_node is also in the state
+            if start_node in state:
+                try:
+                    # Keep the AND and OR as they are (no need to replace)
+                    new_state[end_node] = eval(edge_func, {}, new_state)
+                    #print(f"Edge ({start_node} -> {end_node}): {edge_func} => {new_state[end_node]}")
+                except Exception as e:
+                    print(f"Warning: Error evaluating edge function for edge ({start_node}, {end_node}). Error: {e}")
+                    new_state[end_node] = 0  # Default value
+
+        return new_state
+    
+
     def get_reward(self, state, next_state):
         """
         Calculate the reward based on the target values.
@@ -196,8 +234,6 @@ class QLearningAgent:
 
         :param episodes: The number of episodes to train.
         """
-
-
         for episode in range(episodes):
             done = False
 
@@ -214,7 +250,7 @@ class QLearningAgent:
             intermediate_states = [action]
             while not done and steps < 20:
                 # Evaluate the next state using the Boolean network update rules
-                next_state = evaluate_state(self.current_state, self.primes, self.edge_functions)
+                next_state = self.evaluate_state(self.current_state)
                 reward = self.get_reward(self.current_state, next_state)
 
                 # Update the Q-table
@@ -249,8 +285,6 @@ class QLearningAgent:
                     next_state = self.current_state  # Use the final state
                 self.update_q_table(current_state, final_reward, next_state)
             self.current_state= action.copy()  # Store the last action taken
-
-
 
 
     def get_initial_state(self):
