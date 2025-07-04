@@ -119,7 +119,7 @@ class QLearningAgent:
             state = self.current_state
 
         # Nodes with a value of None – we will generate all combinations for these nodes
-        none_nodes = [node for node in nodes if state.get(node) is None]
+        none_nodes = [node for node in state if state.get(node) is None]
 
         # All possible combinations of 0/1 for the nodes that are None
         possible_replace_none = list(product([0, 1], repeat=len(none_nodes)))
@@ -248,7 +248,7 @@ class QLearningAgent:
             logging.debug(f"\n action checks: {action}")  # Debug
             steps = 0
             intermediate_states = [action]
-            while not done and steps < 20:
+            while not done and steps < 50:
                 # Evaluate the next state using the Boolean network update rules
                 next_state = self.evaluate_state(self.current_state)
                 reward = self.get_reward(self.current_state, next_state)
