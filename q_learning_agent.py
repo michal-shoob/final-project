@@ -212,7 +212,7 @@ class QLearningAgent:
             logging.debug(f"\n action checks: {action}")  # Debug
             steps = 0
             intermediate_states = [action]
-            while not done and steps < 20:
+            while not done and steps < 50:
                 # Evaluate the next state using the Boolean network update rules
                 next_state = evaluate_state(self.current_state, self.primes, self.edge_functions)
                 reward = self.get_reward(self.current_state, next_state)
@@ -249,6 +249,7 @@ class QLearningAgent:
                     next_state = self.current_state  # Use the final state
                 self.update_q_table(current_state, final_reward, next_state)
             self.current_state= action.copy()  # Store the last action taken
+        print("not found")
 
 
 
