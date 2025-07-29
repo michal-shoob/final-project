@@ -285,6 +285,7 @@ class QLearningAgent:
                     next_state = self.current_state  # Use the final state
                 self.update_q_table(current_state, final_reward, next_state)
             self.current_state= action.copy()  # Store the last action taken
+        print("not found")
 
 
     def get_initial_state(self):

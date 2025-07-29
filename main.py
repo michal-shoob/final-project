@@ -69,7 +69,7 @@ def main():
 
     # Create and train the Q-learning agent
     q_agent = QLearningAgent(primes_3, edge_functions_3, target_values_3, initial_values_3, epsilon=args.epsilon)
-    q_agent.train(episodes=100)
+    q_agent.train(episodes=1000)
 
     # Find initial conditions using the trained Q-learning agent
     #valid_initial_conditions = find_initial_conditions(primes, target_values, nodes, edge_functions,initial_values, max_iterations=100)
