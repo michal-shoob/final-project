@@ -248,23 +248,28 @@ class QLearningAgent:
             logging.debug(f"\n action checks: {action}")  # Debug
             steps = 0
             intermediate_states = [action]
-            while not done and steps < 50:
+            while not done and steps < 500:  # Limit steps to avoid infinite loops
                 # Evaluate the next state using the Boolean network update rules
                 next_state = self.evaluate_state(self.current_state)
-                reward = self.get_reward(self.current_state, next_state)
 
-                # Update the Q-table
-                self.update_q_table(self.current_state, reward, next_state)
+                next_state_key = self.get_state_key(next_state)
+                if self.q_table.get(next_state_key) >= 0.0: # If the next state can led to target
+                    reward = self.get_reward(self.current_state, next_state)
 
-                # Store the intermediate state
-                intermediate_states.append(next_state.copy())
+                    # Update the Q-table
+                    self.update_q_table(self.current_state, reward, next_state)
 
-                # Check if the state has stabilized
-                done = (self.current_state == next_state)
+                    # Store the intermediate state
+                    intermediate_states.append(next_state.copy())
 
-                # Transition to the next state
-                self.current_state = next_state.copy()
-                steps += 1
+                    # Check if the state has stabilized
+                    done = (self.current_state == next_state)
+
+                    # Transition to the next state
+                    self.current_state = next_state.copy()
+                    steps += 1
+                else:
+                    done = True  # Stop if the next state cannot lead to target
 
             # After the episode ends, check if the final state is terminal
             if self.is_terminal_state(self.current_state):
@@ -285,7 +290,7 @@ class QLearningAgent:
                     next_state = self.current_state  # Use the final state
                 self.update_q_table(current_state, final_reward, next_state)
             self.current_state= action.copy()  # Store the last action taken
-        print("not found")
+            print("not found")
 
 
     def get_initial_state(self):
