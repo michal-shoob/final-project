@@ -1,7 +1,6 @@
 import numpy as np
 from itertools import product
 import logging
-from logger_setup import logger
 
 
 
@@ -179,24 +178,26 @@ class QLearningAgent:
         return new_state
     
 
-    def get_reward(self, state, next_state):
+    def get_reward(self, state, next_state, step_penalty=0):
         """
-        Calculate the reward based on the target values.
+        Calculate the reward based on the target values and distance to goal.
 
         :param state: The current state.
-        :param action: The action taken.
         :param next_state: The next state.
+        :param step_penalty: Penalty for number of steps taken.
         :return: The reward.
         """
-        reward = 0
         if self.is_terminal_state(next_state):
-            reward = 1.0  # Terminal state reward
+            # Success: base reward minus step penalty (fewer steps = higher reward)
+            base_reward = 10.0
+            reward = base_reward - (step_penalty * 0.1)  # Small penalty per step
         else:
-            reward = -1.0  # Non-terminal state reward
-            # for node, target in self.target_values.items():
-            #     if next_state[node] == target:
-            #         reward = (1 / len(self.target_values))/10  # Normalized reward
-        #logging.debug(f"\nReward calculated: {reward}")  # Debug
+            # Calculate distance to target (how many nodes match target)
+            matching_nodes = sum(1 for node, target in self.target_values.items() 
+                               if next_state.get(node) == target)
+            total_nodes = len(self.target_values)
+            distance_reward = (matching_nodes / total_nodes) * 2.0  # Partial progress reward
+            reward = distance_reward - 0.5  # Small negative base to encourage progress
         return reward
 
     def update_q_table(self, state, reward, next_state):
@@ -236,14 +237,12 @@ class QLearningAgent:
         """
         for episode in range(episodes):
             done = False
-
             # Choose an action
             action = self.choose_action()
             if action == self.current_state:
                 done =  True
-            if done:
                 logging.info(f"\n--- action {action} led to the target state immediately ---")
-                break
+                break    
             self.current_state = action     # Use the action to set the current state
             logging.debug(f"\n action checks: {action}")  # Debug
             steps = 0
@@ -251,45 +250,61 @@ class QLearningAgent:
             while not done and steps < 500:  # Limit steps to avoid infinite loops
                 # Evaluate the next state using the Boolean network update rules
                 next_state = self.evaluate_state(self.current_state)
-
+                 # Store the intermediate state
+                intermediate_states.append(next_state.copy())
+                
                 next_state_key = self.get_state_key(next_state)
-                if self.q_table.get(next_state_key) >= 0.0: # If the next state can led to target
-                    reward = self.get_reward(self.current_state, next_state)
+                if self.q_table.get(next_state_key) >= 0.0: # If the next state can lead to target
+                    reward = self.get_reward(self.current_state, next_state, steps)
 
                     # Update the Q-table
                     self.update_q_table(self.current_state, reward, next_state)
 
-                    # Store the intermediate state
-                    intermediate_states.append(next_state.copy())
-
-                    # Check if the state has stabilized
-                    done = (self.current_state == next_state)
+                    # Check if the state has stabilized or reached target
+                    done = (self.current_state == next_state) or self.is_terminal_state(next_state)
 
                     # Transition to the next state
-                    self.current_state = next_state.copy()
+                    self.current_state = next_state
                     steps += 1
                 else:
                     done = True  # Stop if the next state cannot lead to target
 
-            # After the episode ends, check if the final state is terminal
+            # After the episode ends, apply final rewards based on success/failure
             if self.is_terminal_state(self.current_state):
-                final_reward = 1.0
-            # If not terminal, assign a negative reward
+                # SUCCESS: Give positive rewards with step-based penalty
+                # Shorter paths get higher rewards
+                base_success_reward = 10.0
+                step_penalty = len(intermediate_states) * 0.1
+                final_reward = base_success_reward - step_penalty
+                
+                # Update intermediate states with success rewards (higher for states closer to goal)
+                for i in range(len(intermediate_states)):
+                    current_state = intermediate_states[i]
+                    if i < len(intermediate_states) - 1:
+                        next_state = intermediate_states[i + 1]
+                    else:
+                        next_state = self.current_state
+                    
+                    # Reward decreases with distance from goal (later states get higher rewards)
+                    distance_from_goal = len(intermediate_states) - i - 1
+                    state_reward = final_reward - (distance_from_goal * 0.5)
+                    self.update_q_table(current_state, state_reward, next_state)
             else:
-                final_reward = -1.0
-
-            # for state in intermediate_states:
-                # Update Q-table for each intermediate state
-            #    self.update_q_table(state, final_reward, state)
-            # Update Q-table for the last action taken
-            for i in range(len(intermediate_states)):
-                current_state = intermediate_states[i]
-                if i < len(intermediate_states) - 1:
-                    next_state = intermediate_states[i + 1]
-                else:
-                    next_state = self.current_state  # Use the final state
-                self.update_q_table(current_state, final_reward, next_state)
+                # FAILURE: Give negative rewards to discourage these paths
+                failure_penalty = -5.0
+                
+                # Update intermediate states with negative rewards
+                for i in range(len(intermediate_states)):
+                    current_state = intermediate_states[i]
+                    if i < len(intermediate_states) - 1:
+                        next_state = intermediate_states[i + 1]
+                    else:
+                        next_state = self.current_state
+                    
+                    # Apply failure penalty to discourage these intermediate states
+                    self.update_q_table(current_state, failure_penalty, next_state)
             self.current_state= action.copy()  # Store the last action taken
+        if not done:
             print("not found")
 
 
