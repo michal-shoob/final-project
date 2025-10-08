@@ -25,7 +25,7 @@ project_name/
 ├── src/                      # Source code
 │   ├── main.py               # Main entry point
 │   ├── boolean_network.py    # Boolean network implementation
-│   ├── q_learning_agent.py   # Q-learning agent implementation
+│   ├── td_agent.py           # TD agent implementation
 │   ├── logger_setup.py       # Logging setup
 │   └── utils/                # Utility functions or modules 
 │
@@ -35,7 +35,7 @@ project_name/
 │
 ├── results/                  # Output files and visualizations
 │   ├── network_states/       # State evolution diagrams
-│   └── q_tables/             # Learned Q-table visualizations
+│   └── value_tables/         # Learned value-table visualizations
 |--- Screenshots              # Output 1 : network_states, table_visualization
 │
 ├── requirements.txt          # Dependencies
@@ -62,6 +62,6 @@ Run the project using the following steps:
     ```bash
    python src/main.py --num_episodes 1000 --learning_rate 0.1
    ```
-   This command runs the Q-learning agent for 1000 episodes with a learning rate of 0.1.
+   This command runs the TD agent for 1000 episodes with a learning rate of 0.1.
 
 ---

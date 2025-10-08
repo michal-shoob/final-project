@@ -4,11 +4,11 @@ import logging
 
 
 
-class QLearningAgent:
+class TDAgent:
     def __init__(self, primes, edge_functions, target_values, initial_values, alpha=0.1, gamma=0.9, epsilon=0.1, 
                  use_state_aggregation=True, aggregation_level=0.8):
         """
-        Initialize the Q-learning agent.
+        Initialize the TD learning agent.
 
         :param primes: A dictionary of node functions (primes).
         :param edge_functions: A dictionary of edge functions.
@@ -38,9 +38,9 @@ class QLearningAgent:
         self.action_space_size = 2 ** len(self.controllable_nodes) if len(self.controllable_nodes) <= 20 else float('inf')
         self.max_actions_to_evaluate = min(1000, self.action_space_size)  # Limit action evaluation
 
-        # Initialize Q-table as empty dictionary (lazy initialization)
-        self.q_table = {}
-        self.default_q_value = 0.0  # Default Q-value for unseen states
+        # Initialize value table as empty dictionary (lazy initialization)
+        self.value_table = {}
+        self.default_value = 0.0  # Default value for unseen states
         
         # Experience replay buffer
         self.experience_buffer = []
@@ -53,23 +53,23 @@ class QLearningAgent:
             'episodes_completed': 0,
             'successful_episodes': 0,
             'total_steps': 0,
-            'q_table_size': 0
+            'value_table_size': 0
         }
         
         # Memory management
-        self.max_q_table_size = 50000  # Maximum Q-table entries
-        self.cleanup_frequency = 100  # Clean up Q-table every N episodes
+        self.max_value_table_size = 50000  # Maximum value table entries
+        self.cleanup_frequency = 100  # Clean up value table every N episodes
 
-        #logging.debug(f"Initial Q-table: {self.q_table}")  # Debug
+        #logging.debug(f"Initial value table: {self.value_table}")  # Debug
 
-    def get_q_value(self, state_key):
-        """Get Q-value for a state, with lazy initialization and approximation"""
-        if state_key not in self.q_table:
+    def get_state_value(self, state_key):
+        """Get state value for a state, with lazy initialization and approximation"""
+        if state_key not in self.value_table:
             # Use approximation for unseen states instead of default value
             state_dict = dict(state_key) if isinstance(state_key, tuple) else state_key
-            approximated_value = self.approximate_q_value(state_dict)
-            self.q_table[state_key] = approximated_value
-        return self.q_table[state_key]
+            approximated_value = self.approximate_state_value(state_dict)
+            self.value_table[state_key] = approximated_value
+        return self.value_table[state_key]
     
     def aggregate_state(self, state):
         """
@@ -150,34 +150,34 @@ class QLearningAgent:
         experiences = self.sample_experiences()
         
         for state, action, reward, next_state, done in experiences:
-            # Update Q-table using the stored experience
+            # Update value table using the stored experience
             state_key = self.get_state_key(state)
             next_state_key = self.get_state_key(next_state)
             
-            current_q = self.get_q_value(state_key)
-            next_q = self.get_q_value(next_state_key) if not done else 0.0
+            current_value = self.get_state_value(state_key)
+            next_value = self.get_state_value(next_state_key) if not done else 0.0
             
-            # Q-learning update
-            new_q = current_q + self.alpha * (reward + self.gamma * next_q - current_q)
-            self.q_table[state_key] = new_q
+            # TD learning update
+            new_value = current_value + self.alpha * (reward + self.gamma * next_value - current_value)
+            self.value_table[state_key] = new_value
     
-    def cleanup_q_table(self):
+    def cleanup_value_table(self):
         """
-        Clean up Q-table by removing low-value entries to manage memory.
+        Clean up value table by removing low-value entries to manage memory.
         """
-        if len(self.q_table) <= self.max_q_table_size:
+        if len(self.value_table) <= self.max_value_table_size:
             return
         
-        # Sort Q-values and keep only the top entries
-        sorted_entries = sorted(self.q_table.items(), key=lambda x: abs(x[1]), reverse=True)
+        # Sort state values and keep only the top entries
+        sorted_entries = sorted(self.value_table.items(), key=lambda x: abs(x[1]), reverse=True)
         
         # Keep top entries and reset others
-        self.q_table = dict(sorted_entries[:self.max_q_table_size])
+        self.value_table = dict(sorted_entries[:self.max_value_table_size])
         
         # Update statistics
-        self.learning_stats['q_table_size'] = len(self.q_table)
+        self.learning_stats['value_table_size'] = len(self.value_table)
         
-        logging.info(f"Q-table cleaned up. Current size: {len(self.q_table)}")
+        logging.info(f"Value table cleaned up. Current size: {len(self.value_table)}")
     
     def adaptive_epsilon_decay(self):
         """
@@ -197,7 +197,7 @@ class QLearningAgent:
         
         :return: Dictionary of learning statistics
         """
-        self.learning_stats['q_table_size'] = len(self.q_table)
+        self.learning_stats['value_table_size'] = len(self.value_table)
         return self.learning_stats.copy()
     
     def heuristic_value(self, state):
@@ -254,12 +254,12 @@ class QLearningAgent:
             # Quick heuristic evaluation
             heuristic_score = self.heuristic_value(action)
             
-            # Combine with Q-value if available
+            # Combine with state value if available
             action_key = self.get_state_key(action)
-            q_value = self.get_q_value(action_key)
+            state_value = self.get_state_value(action_key)
             
-            # Weighted combination: 70% heuristic, 30% Q-value
-            combined_score = 0.7 * heuristic_score + 0.3 * q_value
+            # Weighted combination: 70% heuristic, 30% state value
+            combined_score = 0.7 * heuristic_score + 0.3 * state_value
             action_scores.append((combined_score, action))
         
         # Sort by score and return top-k
@@ -387,21 +387,21 @@ class QLearningAgent:
         
         return None
     
-    def approximate_q_value(self, state):
+    def approximate_state_value(self, state):
         """
-        Fast approximation of Q-value for unseen states using heuristics and similarity.
+        Fast approximation of state value for unseen states using heuristics and similarity.
         
-        :param state: State to approximate Q-value for
-        :return: Approximated Q-value
+        :param state: State to approximate state value for
+        :return: Approximated state value
         """
         # Base heuristic value
         heuristic_val = self.heuristic_value(state)
         
-        # Find similar states in Q-table
-        similar_q_values = []
+        # Find similar states in value table
+        similar_values = []
         state_key = self.get_state_key(state)
         
-        for stored_key, q_val in self.q_table.items():
+        for stored_key, value in self.value_table.items():
             # Calculate similarity (number of matching node values)
             if isinstance(stored_key, tuple) and isinstance(state_key, tuple):
                 stored_dict = dict(stored_key)
@@ -413,24 +413,24 @@ class QLearningAgent:
                 similarity = matches / total if total > 0 else 0
                 
                 if similarity > 0.7:  # High similarity threshold
-                    similar_q_values.append((similarity, q_val))
+                    similar_values.append((similarity, value))
         
         # Combine heuristic and similar states
-        if similar_q_values:
+        if similar_values:
             # Weight by similarity
-            weighted_sum = sum(sim * q_val for sim, q_val in similar_q_values)
-            total_weight = sum(sim for sim, _ in similar_q_values)
+            weighted_sum = sum(sim * value for sim, value in similar_values)
+            total_weight = sum(sim for sim, _ in similar_values)
             similar_avg = weighted_sum / total_weight if total_weight > 0 else 0
             
             # Combine: 60% heuristic, 40% similar states
             return 0.6 * heuristic_val + 0.4 * similar_avg
         else:
             # No similar states found, use pure heuristic
-            return heuristic_val * 0.1  # Scale down heuristic for Q-value range
+            return heuristic_val * 0.1  # Scale down heuristic for state value range
 
     def get_state_key(self, state):
         """
-        Convert the state to a hashable key (e.g., tuple) for the Q-table.
+        Convert the state to a hashable key (e.g., tuple) for the value table.
 
         :param state: The current state of the Boolean network.
         :return: A hashable key representing the state.
@@ -444,7 +444,7 @@ class QLearningAgent:
 
     def get_action_key(self, action):
         """
-        Convert the action to a hashable key (e.g., tuple) for the Q-table.
+        Convert the action to a hashable key (e.g., tuple) for the value table.
 
         :param action: The action taken.
         :return: A hashable key representing the action.
@@ -472,16 +472,16 @@ class QLearningAgent:
         else:
             # Exploit: choose best action from promising set
             if len(promising_actions) > 0:
-                # Evaluate Q-values for promising actions only
+                # Evaluate state values for promising actions only
                 best_action = None
-                best_q = float('-inf')
+                best_value = float('-inf')
                 
                 for action in promising_actions:
                     try:
                         action_key = self.get_state_key(action)
-                        q_value = self.get_q_value(action_key)
-                        if q_value > best_q:
-                            best_q = q_value
+                        state_value = self.get_state_value(action_key)
+                        if state_value > best_value:
+                            best_value = state_value
                             best_action = action
                     except Exception as e:
                         logging.error(f"Error processing action {action}: {str(e)}")
@@ -586,9 +586,9 @@ class QLearningAgent:
             reward = distance_reward - 0.5  # Small negative base to encourage progress
         return reward
 
-    def update_q_table(self, state, reward, next_state):
+    def update_value_table(self, state, reward, next_state):
         """
-        Update the Q-table using the Q-learning update rule.
+        Update the value table using the TD learning update rule.
 
         :param state: The current state.
         :param reward: The reward received.
@@ -600,24 +600,24 @@ class QLearningAgent:
         next_state_key = self.get_state_key(next_state)
 
         # Debugging print
-        #logging.info("\n--- Updating Q-table ---")  # Debug
+        #logging.info("\n--- Updating value table ---")  # Debug
         #print(f"State: {state}, Action: {action}, Reward: {reward}, Next State: {next_state}")
 
-        # Get current Q-value (initialize if not present) - Q(s):
-        current_q = self.get_q_value(state_key)
+        # Get current state value (initialize if not present) - V(s):
+        current_value = self.get_state_value(state_key)
 
-        next_state_value = self.get_q_value(next_state_key)
+        next_state_value = self.get_state_value(next_state_key)
 
-        # Q-learning update
+        # TD learning update
         # new V(s) <- V(s) + alpha [R + gamma * V(s')-V(s)]
-        new_q = current_q + self.alpha * (reward + self.gamma * next_state_value - current_q)
-        self.q_table[(state_key)] = new_q
-        logging.debug(f"\n Q-table in state {state_key} updated to: {new_q}")  # Debug
+        new_value = current_value + self.alpha * (reward + self.gamma * next_state_value - current_value)
+        self.value_table[(state_key)] = new_value
+        logging.debug(f"\n Value table in state {state_key} updated to: {new_value}")  # Debug
 
 
     def train(self, episodes):
         """
-        Train the Q-learning agent over a number of episodes.
+        Train the TD learning agent over a number of episodes.
 
         :param episodes: The number of episodes to train.
         """
@@ -630,7 +630,7 @@ class QLearningAgent:
             
             # Periodic cleanup
             if episode % self.cleanup_frequency == 0:
-                self.cleanup_q_table()
+                self.cleanup_value_table()
             
             # Choose an action
             action = self.choose_action()
@@ -668,14 +668,14 @@ class QLearningAgent:
                 intermediate_states.append(next_state.copy())
                 
                 next_state_key = self.get_state_key(next_state)
-                if self.get_q_value(next_state_key) >= 0.0: # If the next state can lead to target
+                if self.get_state_value(next_state_key) >= 0.0: # If the next state can lead to target
                     reward = self.get_reward(self.current_state, next_state, steps)
 
                     # Store experience for replay
                     self.store_experience(self.current_state, None, reward, next_state, False)
 
-                    # Update the Q-table
-                    self.update_q_table(self.current_state, reward, next_state)
+                    # Update the value table
+                    self.update_value_table(self.current_state, reward, next_state)
                     
                     # Perform experience replay periodically
                     if steps % self.replay_frequency == 0:
@@ -710,7 +710,7 @@ class QLearningAgent:
                     # Reward decreases with distance from goal (later states get higher rewards)
                     distance_from_goal = len(intermediate_states) - i - 1
                     state_reward = final_reward - (distance_from_goal * 0.5)
-                    self.update_q_table(current_state, state_reward, next_state)
+                    self.update_value_table(current_state, state_reward, next_state)
             else:
                 # FAILURE: Give negative rewards to discourage these paths
                 failure_penalty = -5.0
@@ -724,7 +724,7 @@ class QLearningAgent:
                         next_state = self.current_state
                     
                     # Apply failure penalty to discourage these intermediate states
-                    self.update_q_table(current_state, failure_penalty, next_state)
+                    self.update_value_table(current_state, failure_penalty, next_state)
             self.current_state= action.copy()  # Store the last action taken
             
             # Update total steps
@@ -734,7 +734,7 @@ class QLearningAgent:
             print("not found")
         
         # Final cleanup and stats
-        self.cleanup_q_table()
+        self.cleanup_value_table()
         logging.info(f"Training completed. Stats: {self.get_learning_stats()}")
 
 
@@ -761,12 +761,12 @@ class QLearningAgent:
 
     def get_optimal_policy(self):
         """
-        Extract the optimal policy from the Q-table.
+        Extract the optimal policy from the value table.
 
         :return: A dictionary mapping states to optimal actions.
         """
         policy = {}
-        for (state_key, action), q_value in self.q_table.items():
-            if state_key not in policy or q_value > self.q_table.get((state_key, policy[state_key]), 0):
+        for (state_key, action), state_value in self.value_table.items():
+            if state_key not in policy or state_value > self.value_table.get((state_key, policy[state_key]), 0):
                 policy[state_key] = action
         return policy
