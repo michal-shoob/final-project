@@ -1,6 +1,7 @@
 import numpy as np
 from itertools import product
 import logging
+import sqlite3
 
 
 
@@ -41,6 +42,8 @@ class TDAgent:
         # Initialize value table as empty dictionary (lazy initialization)
         self.value_table = {}
         self.default_value = 0.0  # Default value for unseen states
+        self.db_path = "td_agent_value_table.db"
+        self._init_db()
         
         # Experience replay buffer
         self.experience_buffer = []
@@ -65,10 +68,14 @@ class TDAgent:
     def get_state_value(self, state_key):
         """Get state value for a state, with lazy initialization and approximation"""
         if state_key not in self.value_table:
-            # Use approximation for unseen states instead of default value
-            state_dict = dict(state_key) if isinstance(state_key, tuple) else state_key
-            approximated_value = self.approximate_state_value(state_dict)
-            self.value_table[state_key] = approximated_value
+            db_value = self._get_db_value(state_key)
+            if db_value is not None:
+                self.value_table[state_key] = db_value
+            else:
+                state_dict = dict(state_key) if isinstance(state_key, tuple) else state_key
+                approximated_value = self.approximate_state_value(state_dict)
+                self.value_table[state_key] = approximated_value
+                self._set_db_value(state_key, approximated_value)
         return self.value_table[state_key]
     
     def aggregate_state(self, state):
@@ -167,16 +174,14 @@ class TDAgent:
         """
         if len(self.value_table) <= self.max_value_table_size:
             return
-        
+
         # Sort state values and keep only the top entries
         sorted_entries = sorted(self.value_table.items(), key=lambda x: abs(x[1]), reverse=True)
-        
-        # Keep top entries and reset others
+
+        # Keep top entries in memory, others only in DB
         self.value_table = dict(sorted_entries[:self.max_value_table_size])
-        
-        # Update statistics
+        self._sync_cache_to_db()
         self.learning_stats['value_table_size'] = len(self.value_table)
-        
         logging.info(f"Value table cleaned up. Current size: {len(self.value_table)}")
     
     def adaptive_epsilon_decay(self):
@@ -245,7 +250,7 @@ class TDAgent:
         :return: List of most promising actions
         """
         # Sample actions intelligently instead of evaluating all
-        num_samples = min(self.max_actions_to_evaluate, max(top_k * 10, 50))
+        num_samples = min(self.max_actions_to_evaluate, max(top_k * 5, 20))
         sampled_actions = self.sample_actions_intelligently(state, num_samples)
         
         action_scores = []
@@ -329,7 +334,7 @@ class TDAgent:
         
         # Prune if heuristic value is too low
         heuristic_val = self.heuristic_value(state)
-        if heuristic_val < -5.0:  # Very unpromising states
+        if heuristic_val < 0:  # Very unpromising states
             return True
         
         # Prune if we've seen this state too many times (avoid loops)
@@ -612,6 +617,7 @@ class TDAgent:
         # new V(s) <- V(s) + alpha [R + gamma * V(s')-V(s)]
         new_value = current_value + self.alpha * (reward + self.gamma * next_state_value - current_value)
         self.value_table[(state_key)] = new_value
+        self._set_db_value(state_key, new_value)
         logging.debug(f"\n Value table in state {state_key} updated to: {new_value}")  # Debug
 
 
@@ -636,13 +642,13 @@ class TDAgent:
             action = self.choose_action()
             if action == self.current_state:
                 done =  True
-                logging.info(f"\n--- action {action} led to the target state immediately ---")
+                logging.info(f"\n Completed simulation, action {action} led to the target state in {self.learning_stats['total_steps']} steps")
                 break    
             self.current_state = action     # Use the action to set the current state
             logging.debug(f"\n action checks: {action}")  # Debug
             steps = 0
             intermediate_states = [action]
-            while not done and steps < 500:  # Limit steps to avoid infinite loops
+            while not done and steps < 200:  # Limit steps to avoid infinite loops
                 # Update state visit count for pruning
                 self.update_state_visit_count(self.current_state)
                 
@@ -770,3 +776,39 @@ class TDAgent:
             if state_key not in policy or state_value > self.value_table.get((state_key, policy[state_key]), 0):
                 policy[state_key] = action
         return policy
+
+    # --- Hybrid cache and SQLite DB methods ---
+
+    def _init_db(self):
+        self.conn = sqlite3.connect(self.db_path)
+        self.cursor = self.conn.cursor()
+        self.cursor.execute(
+            "CREATE TABLE IF NOT EXISTS value_table (state_key TEXT PRIMARY KEY, value REAL)"
+        )
+        self.conn.commit()
+
+    def _serialize_key(self, state_key):
+        # Convert tuple to string for DB storage
+        return str(state_key)
+
+    def _deserialize_key(self, key_str):
+        # Convert string back to tuple
+        import ast
+        return ast.literal_eval(key_str)
+
+    def _get_db_value(self, state_key):
+        key_str = self._serialize_key(state_key)
+        self.cursor.execute("SELECT value FROM value_table WHERE state_key=?", (key_str,))
+        row = self.cursor.fetchone()
+        return row[0] if row else None
+
+    def _set_db_value(self, state_key, value):
+        key_str = self._serialize_key(state_key)
+        self.cursor.execute(
+            "INSERT OR REPLACE INTO value_table (state_key, value) VALUES (?, ?)", (key_str, value)
+        )
+        self.conn.commit()
+
+    def _sync_cache_to_db(self):
+        for state_key, value in self.value_table.items():
+            self._set_db_value(state_key, value)
