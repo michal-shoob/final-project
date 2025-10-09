@@ -244,10 +244,10 @@ v50,   v49 | v31
 
 
 # Convert the network to primes format
-primes_3 = file_exchange.bnet2primes(bnet)
+primes_3 = file_exchange.bnet2primes(bnet_3)
 
 # List of nodes
-nodes_3 = list(primes.keys())
+nodes_3 = list(primes_3.keys())
 initial_values_3 = {
     "v1": 1,
     "v2": 1,
