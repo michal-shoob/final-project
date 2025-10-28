@@ -30,6 +30,7 @@ class TDAgent:
         self.aggregation_level = aggregation_level
         self.initial_values = dict(initial_values)  # Convert to dictionary if it isn't
         self.current_state = initial_values.copy()  # Initialize current state
+        self.success = False
 
         # Identify controllable nodes (those with None in initial_values)
         self.controllable_nodes = [node for node, val in initial_values.items() if val is None]
@@ -641,8 +642,10 @@ class TDAgent:
             # Choose an action
             action = self.choose_action()
             if action == self.current_state:
-                done =  True
-                logging.info(f"\n Completed simulation, action {action} led to the target state in {self.learning_stats['total_steps']} steps")
+                if self.success:
+                    logging.info(f"\n Simulation completed: action {action} reached the target state in {self.learning_stats['total_steps']} steps")
+                else:
+                    logging.info(f"\n Simulation completed: no action led to the target state")
                 break    
             self.current_state = action     # Use the action to set the current state
             logging.debug(f"\n action checks: {action}")  # Debug
@@ -659,6 +662,7 @@ class TDAgent:
                         # Found a short path, use it
                         intermediate_states.extend(direct_path[:-1])  # All but the last state
                         self.current_state = direct_path[-1]  # Set to final state
+                        steps += len(direct_path)
                         done = True
                         break
                 
@@ -704,6 +708,7 @@ class TDAgent:
                 base_success_reward = 10.0
                 step_penalty = len(intermediate_states) * 0.1
                 final_reward = base_success_reward - step_penalty
+                self.success = True
                 
                 # Update intermediate states with success rewards (higher for states closer to goal)
                 for i in range(len(intermediate_states)):
@@ -717,9 +722,11 @@ class TDAgent:
                     distance_from_goal = len(intermediate_states) - i - 1
                     state_reward = final_reward - (distance_from_goal * 0.5)
                     self.update_value_table(current_state, state_reward, next_state)
+                    
             else:
                 # FAILURE: Give negative rewards to discourage these paths
                 failure_penalty = -5.0
+                self.success = False
                 
                 # Update intermediate states with negative rewards
                 for i in range(len(intermediate_states)):
