@@ -49,15 +49,14 @@ class TDAgent:
 
         # Identify controllable nodes (those with None in initial_values)
         self.controllable_nodes = [node for node, val in initial_values.items() if val is None]
-        self.fixed_nodes = {node: val for node, val in initial_values.items() if val is not None}
         
         # Don't pre-generate all actions - use lazy generation instead
-        self.action_space_size = 2 ** len(self.controllable_nodes) if len(self.controllable_nodes) <= 20 else float('inf')
-        self.max_actions_to_evaluate = min(1000, self.action_space_size)  # Limit action evaluation
+        controllable_count = len(self.controllable_nodes)
+        action_space_limit = 2 ** controllable_count if controllable_count <= 20 else float('inf')
+        self.max_actions_to_evaluate = min(1000, action_space_limit)  # Limit action evaluation
 
         # Initialize value table as empty dictionary (lazy initialization)
         self.value_table = {}
-        self.default_value = 0.0  # Default value for unseen states
         self.db_path = "td_agent_value_table.db"
         self._init_db()
         
