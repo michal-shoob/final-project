@@ -1,9 +1,11 @@
-from boolean_network import primes_2, edge_functions_2, target_values_2, nodes_2,evaluate_state, find_initial_conditions,initial_values_2
-from boolean_network import primes_3, edge_functions_3, target_values_3,initial_values_3, initial_values_3_1, nodes_3
+from boolean_network import primes_20, edge_functions_20, target_values_20, nodes_20, initial_values_20
+from boolean_network import primes_50, edge_functions_50, target_values_50, initial_values_50, valid_action_50
+from boolean_network import primes_100, edge_functions_100, target_values_100, initial_values_100
 from td_agent import TDAgent
 import argparse
 import logging
 from logger_setup import logger
+from helper import compute_possible_targets
 
 
 
@@ -25,10 +27,17 @@ def main():
     """
    
     args = parse_arguments()
-    logging.info(f"starting simulation...")
+    
+    target_values_50_possible = compute_possible_targets(valid_action_50, primes_50, edge_functions_50)
+    logging.info(f"starting simulation for initial state: {initial_values_50} /n and target values: {target_values_50_possible}")
     # Create and train the TD learning agent
-    td_agent = TDAgent(primes_3, edge_functions_3, target_values_3, initial_values_3_1, epsilon=args.epsilon)
+    td_agent = TDAgent(primes_50, edge_functions_50, target_values_50_possible, initial_values_50, epsilon=args.epsilon)
     td_agent.train(episodes=1000)
+   #td_agent = TDAgent(primes_100, edge_functions_100, target_values_100, initial_values_100, epsilon=args.epsilon)
+    #td_agent.train(episodes=1000)
+    
+
+
 
    
 
