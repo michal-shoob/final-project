@@ -77,3 +77,12 @@ uncommenting the corresponding lines in `main.py`.
   summarize recent experiments.
 
 ---
+
+## Project Documentation
+
+[View the Capstone Project Report here](<https://docs.google.com/document/d/1gG3AKNKqOxGFPkRrkZjE7LSmMy7QIRskd2ZmLe1ufIY/edit?usp=sharing>)
+
+[View the Project Presentation Slides here](<https://drive.google.com/file/d/1PqpRwxh1FKo4S4KCv4T2siwJMum6GMsD/view?usp=sharing>)
+
+---
+
